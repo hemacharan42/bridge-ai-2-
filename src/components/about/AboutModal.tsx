@@ -45,46 +45,55 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           By combining audio viva-voce reasoning with unedited 30fps computer vision audit feeds, the platform certifies real hands-on technical competence with zero hallucinations.
         </p>
 
-        {/* Pillars */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-            <div className="flex items-center gap-2 text-cyan-400 font-semibold text-xs uppercase font-mono">
-              <Zap className="w-4 h-4" />
-              <span>Audio Viva-Voce</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Whisper STT evaluates conversational reasoning, troubleshooting rationale, and safety protocol articulation in local vernaculars.
-            </p>
+        {/* Pillars: 4 Differentiated Sub-Agents Architecture */}
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-mono uppercase tracking-wider text-cyan-400 font-bold">
+              4 Differentiated Sub-Agent Engines
+            </h4>
+            <span className="text-[10px] font-mono text-slate-500">Autonomous & Multimodal Pipeline</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-            <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs uppercase font-mono">
-              <Video className="w-4 h-4" />
-              <span>30 FPS Vision Audit</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
+              <div className="flex items-center gap-2 text-cyan-400 font-semibold text-xs font-mono">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Agent 1: Live Video & Audio Proctor</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                Evaluates real-time MCQ examination streams at 1.5 FPS decimation for face presence, gaze deviation &gt;15°, and audio whispering. Dispatches mentor webhooks upon 3 warnings.
+              </p>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              OpenCV and Gemini 1.5 Flash detect PPE violations (such as missing 1000V rated gloves) with millisecond-exact timestamps.
-            </p>
-          </div>
 
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-            <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs uppercase font-mono">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Anti-Tampering Barcode</span>
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold text-xs font-mono">
+                <Cpu className="w-4 h-4" />
+                <span>Agent 2: Multimodal Barcode Verifier</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                Inspects video keyframes for physical QR/UPC/Code 128 tags. Handles barcode matching, &gt;30% occlusion, and alerts mentors upon mismatch or uncertain evidence.
+              </p>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Physical barcode tracking guarantees the physical component belongs to the registered trainee, eliminating impersonation.
-            </p>
-          </div>
 
-          <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2">
-            <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs uppercase font-mono">
-              <Award className="w-4 h-4" />
-              <span>Faculty Uncertainty Queue</span>
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-400 font-semibold text-xs font-mono">
+                <Zap className="w-4 h-4" />
+                <span>Agent 3: Speech Reasoning & Viva</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                Whisper STT and Gemini 1.5/3.8 evaluate conversational technical terminology, zero-potential de-energization reasoning, and safety precautions.
+              </p>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Any AI confidence under 85% routes immediately to certified ITI master trainers for human-in-the-loop review.
-            </p>
+
+            <div className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
+              <div className="flex items-center gap-2 text-purple-400 font-semibold text-xs font-mono">
+                <Video className="w-4 h-4" />
+                <span>Agent 4: Safety & Sequence Inspector</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed font-light">
+                Multimodal 30fps vision pipeline for PPE compliance (1000V gloves), torque pull tests, and 8.0s circuit breaker routing to Faculty Review Queue.
+              </p>
+            </div>
           </div>
         </div>
 

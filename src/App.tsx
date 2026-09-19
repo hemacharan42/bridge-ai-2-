@@ -8,6 +8,7 @@ import { StudentLoginPage } from "./components/auth/StudentLoginPage";
 import { PostLoginShell, PostLoginView } from "./components/layout/PostLoginShell";
 import { StudentDashboard } from "./components/dashboard/StudentDashboard";
 import { SideBySideAssessment } from "./components/video-assessment/SideBySideAssessment";
+import { LiveProctoringStudio } from "./components/proctoring/LiveProctoringStudio";
 import { AssessmentStudio } from "./components/AssessmentStudio";
 import { ScorecardView } from "./components/ScorecardView";
 import { CohortHeatmapView } from "./components/CohortHeatmapView";
@@ -116,6 +117,10 @@ const MainLayout: React.FC = () => {
         <SideBySideAssessment
           onNavigateToScorecard={() => setPostLoginView("scorecard")}
         />
+      )}
+
+      {postLoginView === "proctoring" && (
+        <LiveProctoringStudio />
       )}
 
       {postLoginView === "studio" && (

@@ -723,6 +723,24 @@ class StorageEngine {
     this.saveToDisk(this.store);
   }
 
+  public addAuditLog(entryOrAction: string | { id?: string; timestamp?: string; action: string; actor?: string; details?: string }, actor: string = "SYSTEM", details: string = ""): void {
+    if (typeof entryOrAction === "object") {
+      this.store.auditLogs.unshift({
+        id: entryOrAction.id || `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        timestamp: entryOrAction.timestamp || new Date().toISOString(),
+        action: entryOrAction.action,
+        actor: entryOrAction.actor || "SYSTEM",
+        details: entryOrAction.details || ""
+      });
+      if (this.store.auditLogs.length > 100) {
+        this.store.auditLogs = this.store.auditLogs.slice(0, 100);
+      }
+      this.saveToDisk(this.store);
+    } else {
+      this.persist(entryOrAction, actor, details);
+    }
+  }
+
   // Get full state
   public getFullStore(): BackendStore {
     return this.store;

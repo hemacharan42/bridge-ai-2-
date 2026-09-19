@@ -3,6 +3,12 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { storage } from "./server/storage";
+import { 
+  proctoringEngine, 
+  barcodeVerifier, 
+  speechEngine, 
+  dualModalEngine 
+} from "./server/subagents";
 
 dotenv.config();
 
@@ -356,66 +362,97 @@ app.get("/api/v1/golden-scorecard", (req: Request, res: Response) => {
 });
 
 // Audio assessment API as defined in PRD Section 2.2
+// =========================================================================
+// 4 SUB-AGENTS SPECIALIZED ENDPOINTS
+// =========================================================================
+
+// Manifest Endpoint: Differentiate all 4 sub-agents
+app.get("/api/v1/subagents/manifest", (req: Request, res: Response) => {
+  res.json({
+    platform: "Bridge NSQF Multi-Agent Assessment Engine",
+    subagents: [
+      {
+        id: "agent_01_proctoring",
+        name: "Live Video & Audio Proctoring Sub-Agent",
+        role: "Automated real-time proctoring agent evaluating candidate video streams during an MCQ/theory examination.",
+        endpoint: "/api/v1/proctor/stream",
+        parameters: ["Face Presence", "Iris/Gaze Tracking (>15° off-axis)", "Audio/Speech Whispering Disruption"],
+        rules: "No biometric template retention; 1.0-1.5 FPS decimation; max 3 warnings before mentor alert webhook.",
+        status: proctoringEngine.getStatus()
+      },
+      {
+        id: "agent_02_barcode_verifier",
+        name: "Multimodal Barcode Verification Agent",
+        role: "Automated computer-vision inspector for video file submissions.",
+        endpoint: "/api/v1/verify/barcode",
+        parameters: ["Barcode Presence", "Code Matching (QR, UPC, Code 128, Data Matrix)", "Occlusion Detection (>30%)", "Video Quality Degradation"],
+        rules: "Mismatch or degraded/uncertain evidence triggers mentor alert webhook and UNCERTAIN_EVIDENCE state.",
+        status: { active: true, format_support: ["QR", "Code 128", "UPC-A", "Data Matrix"] }
+      },
+      {
+        id: "agent_03_speech_reasoning",
+        name: "Speech Reasoning & Viva-Voce Assessment Agent",
+        role: "Lead Speech Evaluator analyzing de-energization reasoning, multimeter diagnostic steps, and safety precautions.",
+        endpoint: "/api/v1/assess/audio",
+        parameters: ["Technical Terminology", "Procedural Coherence", "Safety Precautions", "Keyword Detection"],
+        rules: "Evaluates spoken trade rationale against NSQF Level 4/5 competency guidelines."
+      },
+      {
+        id: "agent_04_dual_modal_inspection",
+        name: "Lead Industrial Safety & Procedural Inspection Agent",
+        role: "Computer-Vision & Multimodal Safety/Sequence Inspector analyzing unedited 30fps evidence videos.",
+        endpoint: "/api/v1/dual-modal",
+        parameters: ["1000V Dielectric Gloves", "Sequence Ordering", "Pull-Test (15N)", "Camera Torso Occlusion (>40%)"],
+        rules: "8.0s circuit breaker; occlusion >40% routes to Faculty Review Queue."
+      }
+    ]
+  });
+});
+
+// Sub-Agent 1: Live Video & Audio Proctoring Stream Evaluation
+app.post("/api/v1/proctor/stream", async (req: Request, res: Response) => {
+  try {
+    const result = await proctoringEngine.evaluateProctoringEvent(req.body);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+app.post("/api/v1/proctor/reset", (req: Request, res: Response) => {
+  res.json(proctoringEngine.resetWarnings());
+});
+
+app.get("/api/v1/proctor/status", (req: Request, res: Response) => {
+  res.json(proctoringEngine.getStatus());
+});
+
+// Sub-Agent 2: Multimodal Barcode Verification
+app.post("/api/v1/verify/barcode", async (req: Request, res: Response) => {
+  try {
+    const result = await barcodeVerifier.verifyBarcodeVideo(req.body);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+app.get("/api/v1/verify/barcode/status", (req: Request, res: Response) => {
+  res.json({
+    active: true,
+    agent: "MULTIMODAL_BARCODE_VERIFICATION_V1",
+    supported_symbologies: ["QR_CODE", "CODE_128", "EAN_13", "UPC_A", "DATA_MATRIX"],
+    decimation_rate: "1.5 FPS keyframes",
+    occlusion_tolerance_percent: 30
+  });
+});
+
+// Sub-Agent 3: Speech Reasoning & Viva Assessment Endpoint
 app.post("/api/v1/assess/audio", async (req: Request, res: Response) => {
   try {
     const { transcript, trade_code, task_id } = req.body;
-    const client = getGeminiClient();
-
-    if (client && transcript) {
-      try {
-        const prompt = `You are the Speech Reasoning Agent for Bridge NSQF Level 4/5 assessments.
-Assess this verbal reasoning transcript for trade ${trade_code || "ELE_L4_DOMESTIC"}, task ${task_id || "TASK_MCB_WIRING_01"}:
-Transcript: "${transcript}"
-
-Evaluate technical terminology, de-energization reasoning, and safety precautions.
-Return JSON with:
-{
-  "transcript": string,
-  "overall_verbal_score": number (0-100),
-  "metrics": {
-    "technical_terminology_score": number,
-    "procedural_coherence_score": number,
-    "safety_precaution_score": number
-  },
-  "keywords_detected": string[],
-  "missing_critical_terms": string[],
-  "reasoning_critique": string
-}`;
-
-        const response = await client.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json"
-          }
-        });
-
-        if (response.text) {
-          const parsed = JSON.parse(response.text);
-          return res.json({
-            session_id: `aud_${Date.now()}`,
-            trade_code: trade_code || "ELE_L4_DOMESTIC",
-            duration_seconds: 18.4,
-            ...parsed
-          });
-        }
-      } catch (aiErr) {
-        console.warn("Gemini audio assessment error, returning golden payload:", aiErr);
-      }
-    }
-
-    // Default high-fidelity speech audit response
-    res.json({
-      session_id: `aud_${Date.now()}`,
-      trade_code: trade_code || "ELE_L4_DOMESTIC",
-      transcript: transcript || GOLDEN_SAMPLE_SCORECARD.speech_audit.transcript,
-      duration_seconds: 18.4,
-      overall_verbal_score: 88.0,
-      metrics: GOLDEN_SAMPLE_SCORECARD.speech_audit.metrics,
-      keywords_detected: GOLDEN_SAMPLE_SCORECARD.speech_audit.keywords_detected,
-      missing_critical_terms: GOLDEN_SAMPLE_SCORECARD.speech_audit.missing_critical_terms,
-      reasoning_critique: GOLDEN_SAMPLE_SCORECARD.speech_audit.reasoning_critique
-    });
+    const result = await speechEngine.evaluateSpeech({ transcript, trade_code, task_id });
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: String(error) });
   }

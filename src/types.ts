@@ -267,3 +267,60 @@ export interface BackendStats {
   };
 }
 
+// =========================================================================
+// 4 DISTINCT SUB-AGENTS DEFINITIONS
+// =========================================================================
+
+// Agent 1: Live Video & Audio Proctoring Sub-Agent
+export type ProctoringViolationType = 
+  | "GAZE_DEVIATION" 
+  | "MULTIPLE_FACES" 
+  | "FACE_ABSENT" 
+  | "AUDIO_DISRUPTION";
+
+export type ProctoringStatusType = 
+  | "CLEAR" 
+  | "DISTRACTION_DETECTED" 
+  | "DISRUPTION_DETECTED";
+
+export interface ProctoringViolation {
+  type: ProctoringViolationType;
+  confidence: number;
+  details: string;
+}
+
+export interface ProctoringEvaluationResult {
+  frame_timestamp_ms: number;
+  proctoring_status: ProctoringStatusType;
+  violations: ProctoringViolation[];
+  issue_warning: boolean;
+  warnings_issued: number;
+  max_warnings: number;
+  trigger_mentor_alert: boolean;
+  mentor_notified: boolean;
+  reason?: string;
+}
+
+// Agent 2: Multimodal Barcode Verification Agent
+export type BarcodeMatchStatus = 
+  | "MATCHED" 
+  | "MISMATCH" 
+  | "UNCERTAIN_EVIDENCE";
+
+export interface BarcodeVerificationResult {
+  barcode_found: boolean;
+  detected_code: string | null;
+  detected_codes?: string[];
+  expected_code: string;
+  match_status: BarcodeMatchStatus;
+  timestamp_sec: number;
+  confidence_score: number;
+  flag_mentor: boolean;
+  summary: string;
+  message?: string;
+}
+
+// Agent 3: Speech Reasoning & Viva-Voce Agent (defined above as SpeechAuditResult)
+// Agent 4: Lead Industrial Safety & Procedural Inspection Agent (defined above as MasterScorecardReport)
+
+

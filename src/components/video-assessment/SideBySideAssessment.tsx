@@ -52,11 +52,42 @@ export const SideBySideAssessment: React.FC<SideBySideAssessmentProps> = ({
   // Right Pane: User upload & anti-tampering state
   const [hasAcknowledgedBarcode, setHasAcknowledgedBarcode] = useState(false);
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [isScanningBarcode, setIsScanningBarcode] = useState(false);
+  const [barcodeScanResult, setBarcodeScanResult] = useState<any>(null);
+  const [barcodeTestScenario, setBarcodeTestScenario] = useState<"matched" | "mismatch" | "occluded_missing" | "uncertain_evidence">("matched");
   const [selectedMarker, setSelectedMarker] = useState<MicroEvidenceItem | null>(
     activeReport.micro_evidence_timeline[0] || null
   );
 
   const barcodeId = "UID-2026-IND-8849-BARCODE";
+
+  const handleRunBarcodeVerification = async (scenario = barcodeTestScenario) => {
+    setIsScanningBarcode(true);
+    setBarcodeScanResult(null);
+    try {
+      const res = await fetch("/api/v1/verify/barcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expected_barcode: barcodeId,
+          simulated_scenario: scenario,
+          candidate_id: "STUDENT_ITI_DL_2026_042",
+          video_path: "busbar_wiring_uncut_30fps.mp4"
+        })
+      });
+      const data = await res.json();
+      setBarcodeScanResult(data);
+      if (data.match_status === "MATCHED") {
+        setHasAcknowledgedBarcode(true);
+      } else {
+        setHasAcknowledgedBarcode(false);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsScanningBarcode(false);
+    }
+  };
 
   const handleMarkerClick = (marker: MicroEvidenceItem) => {
     setSelectedMarker(marker);
@@ -363,6 +394,89 @@ export const SideBySideAssessment: React.FC<SideBySideAssessmentProps> = ({
               <span className="font-mono text-xs font-bold text-cyan-400 tracking-widest">
                 {barcodeId}
               </span>
+            </div>
+
+            {/* Sub-Agent 2 Computer Vision Scan Controls */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-cyan-400 font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Sub-Agent 2 Vision Inspector (1.5 FPS)</span>
+                </span>
+                <span className="text-[10px] font-mono text-slate-500">QR • UPC • Code 128 • DataMatrix</span>
+              </div>
+
+              {/* Scenario Tester Selector */}
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "matched", label: "Valid Match", desc: "Correct Barcode Tag" },
+                  { id: "mismatch", label: "Mismatch Tag", desc: "Wrong Equipment Serial" },
+                  { id: "occluded_missing", label: "Missing / Occluded", desc: ">30% Body Occlusion" },
+                  { id: "uncertain_evidence", label: "Degraded Video", desc: "Uncertain Evidence" }
+                ].map((sc) => (
+                  <button
+                    key={sc.id}
+                    type="button"
+                    onClick={() => {
+                      setBarcodeTestScenario(sc.id as any);
+                      handleRunBarcodeVerification(sc.id as any);
+                    }}
+                    className={`p-2 rounded-xl border text-left text-[11px] font-mono transition-all ${
+                      barcodeTestScenario === sc.id
+                        ? "bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-bold"
+                        : "bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    <div className="font-bold">{sc.label}</div>
+                    <div className="text-[10px] text-slate-500 font-normal">{sc.desc}</div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Scan Trigger Button */}
+              <button
+                type="button"
+                disabled={isScanningBarcode}
+                onClick={() => handleRunBarcodeVerification()}
+                className="w-full py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 font-mono text-xs font-bold flex items-center justify-center gap-2 border border-slate-700 transition-colors"
+              >
+                {isScanningBarcode ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                    <span>Scanning Video Keyframes at 1.5 FPS...</span>
+                  </>
+                ) : (
+                  <>
+                    <Barcode className="w-4 h-4 text-cyan-400" />
+                    <span>Run Sub-Agent 2 Multimodal Barcode Verification</span>
+                  </>
+                )}
+              </button>
+
+              {/* Live Scan Diagnostics Result */}
+              {barcodeScanResult && (
+                <div className={`p-3 rounded-xl border text-xs font-mono space-y-1.5 animate-in fade-in ${
+                  barcodeScanResult.match_status === "MATCHED"
+                    ? "bg-emerald-950/30 border-emerald-500/40 text-emerald-200"
+                    : barcodeScanResult.match_status === "UNCERTAIN_EVIDENCE"
+                    ? "bg-amber-950/30 border-amber-500/40 text-amber-200"
+                    : "bg-rose-950/30 border-rose-500/40 text-rose-200"
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold">STATUS: {barcodeScanResult.match_status}</span>
+                    <span>Confidence: {(barcodeScanResult.confidence_score * 100).toFixed(0)}%</span>
+                  </div>
+                  <p className="text-[11px] font-light leading-relaxed">
+                    {barcodeScanResult.summary}
+                  </p>
+                  {barcodeScanResult.flag_mentor && (
+                    <div className="pt-1 text-[10px] text-rose-400 font-bold flex items-center gap-1">
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      <span>Mentor Webhook Dispatched: Case Flagged for Manual Instructor Review</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Mandatory Anti-Tampering Acknowledgment Text */}

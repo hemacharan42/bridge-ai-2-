@@ -15,7 +15,8 @@ import {
   Briefcase,
   Database,
   Box,
-  Square
+  Square,
+  Eye
 } from "lucide-react";
 import { useAssessment } from "../../store/assessmentContext";
 import { useScorecard } from "../../store/ScorecardContext";
@@ -27,6 +28,7 @@ import { GamificationStreak } from "../dashboard/GamificationStreak";
 export type PostLoginView = 
   | "dashboard" 
   | "side-by-side" 
+  | "proctoring"
   | "studio" 
   | "scorecard" 
   | "heatmap" 
@@ -162,6 +164,14 @@ export const PostLoginShell: React.FC<PostLoginShellProps> = ({
       roles: ["student"],
     },
     {
+      id: "proctoring" as PostLoginView,
+      label: "Live Proctoring Sub-Agent",
+      shortLabel: "Proctoring",
+      icon: Eye,
+      badge: "Sub-Agent 1",
+      roles: ["student", "faculty"],
+    },
+    {
       id: "scorecard" as PostLoginView,
       label: "Master Scorecard",
       shortLabel: "Scorecard",
@@ -193,10 +203,10 @@ export const PostLoginShell: React.FC<PostLoginShellProps> = ({
       return item.id === "recruiter";
     }
     if (currentUser?.role === "faculty") {
-      return ["queue", "scorecard", "heatmap"].includes(item.id);
+      return ["queue", "proctoring", "scorecard", "heatmap"].includes(item.id);
     }
     // Student default
-    return ["dashboard", "side-by-side", "scorecard", "heatmap"].includes(item.id);
+    return ["dashboard", "side-by-side", "proctoring", "scorecard", "heatmap"].includes(item.id);
   });
 
   const isRecruiter = currentUser?.role === "employee";
