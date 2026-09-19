@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { CandidateItem } from "../../types";
 import { 
   X, 
@@ -11,18 +11,23 @@ import {
   Sparkles, 
   Zap, 
   Layers, 
-  ExternalLink,
-  Download,
-  AlertCircle,
-  Clock,
-  Video,
-  ArrowRight
+  ExternalLink, 
+  Download, 
+  Clock, 
+  Video, 
+  Plus, 
+  Search, 
+  UserPlus, 
+  Check, 
+  Filter 
 } from "lucide-react";
 
 interface CandidateComparisonMatrixProps {
   candidates: CandidateItem[];
+  allCandidates?: CandidateItem[];
   onClose: () => void;
   onRemoveCandidate: (id: string) => void;
+  onAddCandidate?: (id: string) => void;
   onShortlistToggle: (id: string) => void;
   shortlistedIds: string[];
   onOpenDossier: (candidate: CandidateItem) => void;
@@ -31,35 +36,72 @@ interface CandidateComparisonMatrixProps {
 /**
  * =========================================================================
  * SIDE-BY-SIDE CANDIDATE COMPARISON MATRIX
- * - Multi-column matrix comparing 2 to 4 candidates across dual-evidence dimensions
+ * - Multi-column matrix comparing 1 to 4 candidates across dual-evidence dimensions
+ * - Interactive "+" slots on empty columns with search dropdown to add pool candidates
  * - Highlights top performers across Safety, Speed, Viva, and Composite score
  * - Direct timeline review access & comparative dossier export
  * =========================================================================
  */
 export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps> = ({
   candidates,
+  allCandidates = [],
   onClose,
   onRemoveCandidate,
+  onAddCandidate,
   onShortlistToggle,
   shortlistedIds,
   onOpenDossier,
 }) => {
   const [highlightBest, setHighlightBest] = useState(true);
-
-  if (candidates.length === 0) {
-    return null;
-  }
+  const [isAddPickerOpen, setIsAddPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerTradeFilter, setPickerTradeFilter] = useState("all");
 
   // Calculate best-in-class values for highlighting
-  const maxComposite = Math.max(...candidates.map((c) => c.composite_score));
-  const maxSafety = Math.max(...candidates.map((c) => c.safety_score));
-  const maxViva = Math.max(...candidates.map((c) => c.viva_speech_score || 0));
-  const maxProcedural = Math.max(...candidates.map((c) => c.procedural_score || 0));
+  const maxComposite = candidates.length > 0 ? Math.max(...candidates.map((c) => c.composite_score)) : 0;
+  const maxSafety = candidates.length > 0 ? Math.max(...candidates.map((c) => c.safety_score)) : 0;
+  const maxViva = candidates.length > 0 ? Math.max(...candidates.map((c) => c.viva_speech_score || 0)) : 0;
+  const maxProcedural = candidates.length > 0 ? Math.max(...candidates.map((c) => c.procedural_score || 0)) : 0;
+
+  // Candidates available to add (not currently in comparison)
+  const availablePoolCandidates = useMemo(() => {
+    const currentIds = new Set(candidates.map((c) => c.candidate_id));
+    return allCandidates.filter((c) => !currentIds.has(c.candidate_id));
+  }, [allCandidates, candidates]);
+
+  const filteredPickerCandidates = useMemo(() => {
+    return availablePoolCandidates.filter((c) => {
+      const q = pickerSearch.toLowerCase().trim();
+      const matchesSearch = 
+        !q ||
+        c.name.toLowerCase().includes(q) ||
+        c.trade.toLowerCase().includes(q) ||
+        c.institution.toLowerCase().includes(q) ||
+        c.candidate_id.toLowerCase().includes(q) ||
+        c.key_skills?.some((s) => s.toLowerCase().includes(q));
+
+      const matchesTrade = 
+        pickerTradeFilter === "all" || 
+        c.trade.toLowerCase().includes(pickerTradeFilter.toLowerCase());
+
+      return matchesSearch && matchesTrade;
+    });
+  }, [availablePoolCandidates, pickerSearch, pickerTradeFilter]);
 
   const handleExportComparison = () => {
     const names = candidates.map((c) => c.name).join(", ");
-    alert(`Exporting Comparative Audit Matrix PDF for: ${names}\nOfficial NSQF benchmark summary generated.`);
+    alert(`Exporting Comparative Audit Matrix PDF for: ${names || "Candidate comparison"}\nOfficial NSQF benchmark summary generated.`);
   };
+
+  const handleSelectCandidateToAdd = (candidateId: string) => {
+    if (onAddCandidate) {
+      onAddCandidate(candidateId);
+    }
+    setIsAddPickerOpen(false);
+    setPickerSearch("");
+  };
+
+  const emptySlotsCount = Math.max(0, 4 - candidates.length);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in overflow-y-auto">
@@ -85,6 +127,18 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
           </div>
 
           <div className="flex items-center gap-2.5">
+            {/* Quick Add Button if slots available */}
+            {candidates.length < 4 && availablePoolCandidates.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIsAddPickerOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/40 text-xs font-mono text-cyan-300 font-bold flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105 shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Candidate</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => setHighlightBest(!highlightBest)}
@@ -122,7 +176,7 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
         {/* Scrollable Matrix Table Area */}
         <div className="flex-1 overflow-auto py-4 -mx-2 px-2">
           <div className="min-w-[720px]">
-            {/* Column Headers: Candidate Cards */}
+            {/* Column Headers: Candidate Cards & Interactive "+" Empty Slots */}
             <div className="grid grid-cols-5 gap-3 mb-4 pb-4 border-b border-slate-800">
               <div className="col-span-1 flex flex-col justify-end p-2">
                 <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider font-semibold">
@@ -130,18 +184,19 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                 </span>
               </div>
 
+              {/* Active Compared Candidate Cards */}
               {candidates.map((c) => {
                 const isShortlisted = shortlistedIds.includes(c.candidate_id);
                 return (
                   <div
                     key={c.candidate_id}
-                    className="col-span-1 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 relative flex flex-col justify-between"
+                    className="col-span-1 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/90 relative flex flex-col justify-between shadow-lg"
                   >
                     <button
                       type="button"
                       onClick={() => onRemoveCandidate(c.candidate_id)}
-                      className="absolute top-2 right-2 p-1 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
-                      title="Remove candidate from comparison"
+                      className="absolute top-2 right-2 p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                      title={`Remove ${c.name} from comparison`}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -150,7 +205,7 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                       <div className="text-[10px] font-mono text-cyan-400 font-bold mb-1">
                         Level {c.nsqf_level || 4}
                       </div>
-                      <h4 className="text-sm font-bold text-white truncate pr-4">
+                      <h4 className="text-sm font-bold text-white truncate pr-5">
                         {c.name}
                       </h4>
                       <p className="text-[11px] text-slate-400 font-light truncate mt-0.5">
@@ -187,15 +242,33 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                 );
               })}
 
-              {/* Placeholder slots if fewer than 4 */}
-              {Array.from({ length: 4 - candidates.length }).map((_, idx) => (
+              {/* Interactive "+" Button on Empty Slots */}
+              {Array.from({ length: emptySlotsCount }).map((_, idx) => (
                 <div
-                  key={`empty-${idx}`}
-                  className="col-span-1 p-4 rounded-2xl border border-dashed border-slate-800/80 flex flex-col items-center justify-center text-center text-slate-600 space-y-1"
+                  key={`empty-slot-${idx}`}
+                  className="col-span-1 p-3.5 rounded-2xl border-2 border-dashed border-slate-800/90 hover:border-cyan-500/50 bg-slate-950/40 hover:bg-cyan-950/15 transition-all flex flex-col items-center justify-center text-center space-y-2.5 min-h-[140px] group relative"
                 >
-                  <Layers className="w-5 h-5 text-slate-700" />
-                  <span className="text-xs font-mono">Empty Slot</span>
-                  <span className="text-[10px] text-slate-600">Select another candidate to compare</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddPickerOpen(true)}
+                    className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 group-hover:border-cyan-500/60 group-hover:bg-cyan-500/20 text-slate-400 group-hover:text-cyan-300 flex items-center justify-center transition-all shadow-md group-hover:scale-105 cursor-pointer"
+                    title="Add candidate to empty comparison column"
+                  >
+                    <Plus className="w-5 h-5 transition-transform duration-300 group-hover:rotate-90" />
+                  </button>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddPickerOpen(true)}
+                      className="text-xs font-mono font-bold text-slate-300 group-hover:text-cyan-300 transition-colors block cursor-pointer"
+                    >
+                      + Add Candidate
+                    </button>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      Slot {candidates.length + idx + 1} of 4 Available
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -233,6 +306,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     </div>
                   );
                 })}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row1-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
+                  </div>
+                ))}
               </div>
 
               {/* Row 2: Safety & PPE Adherence */}
@@ -271,6 +352,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     </div>
                   );
                 })}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row2-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
+                  </div>
+                ))}
               </div>
 
               {/* Row 3: Practical Execution Speed */}
@@ -300,6 +389,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     <div className="text-[10px] text-slate-400 font-light mt-0.5 truncate">
                       {c.verified_clip_duration}
                     </div>
+                  </div>
+                ))}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row3-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
                   </div>
                 ))}
               </div>
@@ -334,6 +431,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     </div>
                   );
                 })}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row4-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
+                  </div>
+                ))}
               </div>
 
               {/* Row 5: Procedural Tool Sequence */}
@@ -366,6 +471,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     </div>
                   );
                 })}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row5-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
+                  </div>
+                ))}
               </div>
 
               {/* Row 6: Verified Skills & Key Competencies */}
@@ -392,6 +505,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                         • {skill}
                       </div>
                     ))}
+                  </div>
+                ))}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row6-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
                   </div>
                 ))}
               </div>
@@ -424,6 +545,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                       <Play className="w-2.5 h-2.5 fill-current" />
                       <span>Play Verification Clip</span>
                     </button>
+                  </div>
+                ))}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row7-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
                   </div>
                 ))}
               </div>
@@ -459,6 +588,14 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     </div>
                   );
                 })}
+                {Array.from({ length: emptySlotsCount }).map((_, idx) => (
+                  <div
+                    key={`empty-row8-${idx}`}
+                    className="col-span-1 p-2.5 rounded-xl border border-dashed border-slate-800/40 bg-slate-950/20 text-center text-slate-700 text-xs font-mono"
+                  >
+                    —
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -488,6 +625,157 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
           </div>
         </div>
       </div>
+
+      {/* =========================================================================
+       * LIGHTWEIGHT CANDIDATE PICKER MODAL / DROPDOWN
+       * Opened when clicking "+" on any empty slot
+       * ========================================================================= */}
+      {isAddPickerOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 flex items-center justify-center font-bold">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Add Candidate to Comparison</h3>
+                  <p className="text-xs text-slate-400">
+                    Select a verified trainee from the pool to populate this comparison slot.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddPickerOpen(false);
+                  setPickerSearch("");
+                }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Search Input & Trade Filter */}
+            <div className="space-y-2 shrink-0">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={pickerSearch}
+                  onChange={(e) => setPickerSearch(e.target.value)}
+                  placeholder="Search candidate name, trade, skill, or institution..."
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                  autoFocus
+                />
+              </div>
+
+              {/* Trade Quick Chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                {["all", "Electrician", "Automation", "Solar", "EV"].map((tr) => (
+                  <button
+                    key={tr}
+                    type="button"
+                    onClick={() => setPickerTradeFilter(tr)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-colors cursor-pointer shrink-0 ${
+                      pickerTradeFilter === tr
+                        ? "bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 font-bold"
+                        : "bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800"
+                    }`}
+                  >
+                    {tr === "all" ? "All Trades" : tr}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Candidates Pool List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 -mr-1">
+              {filteredPickerCandidates.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                  <Filter className="w-6 h-6 text-slate-600 mx-auto" />
+                  <p className="text-xs font-bold text-slate-300">No candidates available to add</p>
+                  <p className="text-[11px] text-slate-500">
+                    {availablePoolCandidates.length === 0
+                      ? "All pool candidates are already selected in the comparison matrix."
+                      : "No candidates matched your search criteria."}
+                  </p>
+                </div>
+              ) : (
+                filteredPickerCandidates.map((candidate) => {
+                  const isShortlisted = shortlistedIds.includes(candidate.candidate_id);
+                  return (
+                    <div
+                      key={candidate.candidate_id}
+                      onClick={() => handleSelectCandidateToAdd(candidate.candidate_id)}
+                      className="p-3 rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/40 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                    >
+                      <div className="min-w-0 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 group-hover:border-cyan-500/40 flex items-center justify-center text-xs font-mono font-bold text-cyan-400 shrink-0">
+                          L{candidate.nsqf_level || 4}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+                              {candidate.name}
+                            </h4>
+                            {isShortlisted && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[9px] font-mono font-bold">
+                                Shortlisted
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {candidate.institution} • <span className="text-slate-300">{candidate.trade}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <div className="text-right hidden sm:block">
+                          <div className="text-xs font-mono font-bold text-emerald-400">
+                            {candidate.composite_score}% Score
+                          </div>
+                          <div className="text-[10px] font-mono text-slate-400">
+                            {candidate.safety_score}% Safety
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectCandidateToAdd(candidate.candidate_id);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs font-mono flex items-center gap-1 transition-all shadow-md shadow-cyan-500/20 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 font-mono shrink-0">
+              <span>{availablePoolCandidates.length} Candidates Available</span>
+              <button
+                type="button"
+                onClick={() => setIsAddPickerOpen(false)}
+                className="hover:text-white underline cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

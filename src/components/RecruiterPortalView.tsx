@@ -87,6 +87,21 @@ export const RecruiterPortalView: React.FC = () => {
     toggleCandidateShortlist(candidateId);
   };
 
+  const addCompareCandidate = (candidateId: string) => {
+    setComparisonCandidateIds((prev) => {
+      if (prev.includes(candidateId)) return prev;
+      if (prev.length >= 4) {
+        alert("Maximum 4 candidates can be compared side-by-side. Please remove one first.");
+        return prev;
+      }
+      return [...prev, candidateId];
+    });
+  };
+
+  const removeCompareCandidate = (candidateId: string) => {
+    setComparisonCandidateIds((prev) => prev.filter((id) => id !== candidateId));
+  };
+
   const toggleCompareCandidate = (candidateId: string) => {
     setComparisonCandidateIds((prev) => {
       if (prev.includes(candidateId)) {
@@ -98,6 +113,42 @@ export const RecruiterPortalView: React.FC = () => {
       }
       return [...prev, candidateId];
     });
+  };
+
+  // Identify all shortlisted candidates from IDs or hiring status
+  const shortlistedCandidatesList = useMemo(() => {
+    return candidatePool.filter((c) => 
+      shortlistedIds.includes(c.candidate_id) || 
+      c.hiring_status?.toLowerCase().includes("shortlist")
+    );
+  }, [candidatePool, shortlistedIds]);
+
+  const shortlistedCandidateIdsList = useMemo(() => {
+    return shortlistedCandidatesList.map((c) => c.candidate_id);
+  }, [shortlistedCandidatesList]);
+
+  // Check if all shortlisted candidates are selected in comparison
+  const isAllShortlistedCompared = useMemo(() => {
+    if (shortlistedCandidateIdsList.length === 0) return false;
+    return shortlistedCandidateIdsList.every((id) => comparisonCandidateIds.includes(id));
+  }, [shortlistedCandidateIdsList, comparisonCandidateIds]);
+
+  // Handle "Compare All Shortlisted" toggle
+  const handleToggleCompareAllShortlisted = () => {
+    if (isAllShortlistedCompared) {
+      // Uncheck: remove shortlisted candidates from comparison
+      setComparisonCandidateIds((prev) =>
+        prev.filter((id) => !shortlistedCandidateIdsList.includes(id))
+      );
+    } else {
+      // Check: extract all candidate IDs with status === "SHORTLISTED" (up to 4)
+      const combined = Array.from(
+        new Set([...comparisonCandidateIds, ...shortlistedCandidateIdsList])
+      ).slice(0, 4);
+      setComparisonCandidateIds(
+        combined.length > 0 ? combined : shortlistedCandidateIdsList.slice(0, 4)
+      );
+    }
   };
 
   const resetAllFilters = () => {
@@ -329,6 +380,32 @@ export const RecruiterPortalView: React.FC = () => {
               <span>{uiLayoutPreference === "3d-depth" ? "3D Depth" : "Flat UI"}</span>
             </button>
 
+            {/* Compare All Shortlisted Checkbox Toggle */}
+            <label 
+              id="compare-all-shortlisted-toggle"
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-medium flex items-center gap-2 border select-none transition-all cursor-pointer group ${
+                isAllShortlistedCompared
+                  ? "bg-cyan-500/20 text-cyan-300 border-cyan-500/50 font-bold shadow-xs"
+                  : "bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
+              }`}
+              title="Select all shortlisted candidates for side-by-side comparison"
+            >
+              <input
+                type="checkbox"
+                id="compare-all-shortlisted-checkbox"
+                checked={isAllShortlistedCompared}
+                onChange={handleToggleCompareAllShortlisted}
+                className="w-3.5 h-3.5 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-950 cursor-pointer accent-cyan-500"
+              />
+              <span className="flex items-center gap-1.5">
+                <BookmarkCheck className={`w-3.5 h-3.5 ${isAllShortlistedCompared ? "text-cyan-400" : "text-amber-400"}`} />
+                <span>Compare All Shortlisted</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-800/80 text-slate-300 font-bold">
+                  {shortlistedCandidateIdsList.length}
+                </span>
+              </span>
+            </label>
+
             <button
               type="button"
               onClick={() => setFilters({ ...filters, showShortlistOnly: !filters.showShortlistOnly })}
@@ -342,7 +419,7 @@ export const RecruiterPortalView: React.FC = () => {
               <span>Shortlisted ({shortlistedIds.length})</span>
             </button>
 
-            {comparisonCandidateIds.length >= 2 && (
+            {comparisonCandidateIds.length >= 1 && (
               <button
                 type="button"
                 onClick={() => setIsComparisonModalOpen(true)}
@@ -673,8 +750,10 @@ export const RecruiterPortalView: React.FC = () => {
       {isComparisonModalOpen && (
         <CandidateComparisonMatrix
           candidates={comparisonCandidates}
+          allCandidates={candidatePool}
           onClose={() => setIsComparisonModalOpen(false)}
-          onRemoveCandidate={toggleCompareCandidate}
+          onRemoveCandidate={removeCompareCandidate}
+          onAddCandidate={addCompareCandidate}
           onShortlistToggle={toggleShortlist}
           shortlistedIds={shortlistedIds}
           onOpenDossier={(candidate) => {

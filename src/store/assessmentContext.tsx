@@ -131,7 +131,10 @@ export const AssessmentProvider: React.FC<{ children: ReactNode }> = ({ children
 
   // Candidates & Shortlist
   const [candidates, setCandidates] = useState<CandidateItem[]>(RECRUITER_CANDIDATE_POOL as CandidateItem[]);
-  const [shortlistedCandidateIds, setShortlistedCandidateIds] = useState<string[]>(["STUDENT_ITI_MH_2026_119"]);
+  const [shortlistedCandidateIds, setShortlistedCandidateIds] = useState<string[]>([
+    "STUDENT_ITI_MH_2026_119",
+    "STUDENT_ITI_TN_2026_204"
+  ]);
 
   // =========================================================================
   // BACKEND SYNC: Hydrate from Express backend on mount
