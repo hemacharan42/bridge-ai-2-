@@ -1,0 +1,929 @@
+import fs from "fs";
+import path from "path";
+import { 
+  UserProfile, 
+  Course, 
+  MasterScorecardReport, 
+  CohortHeatmapData 
+} from "../types";
+
+export interface QueueItem {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  trade_name: string;
+  task: string;
+  flag_type: string;
+  reason: string;
+  timestamp_ms: number;
+  status: "PENDING_FACULTY_DECISION" | "RESOLVED_PASS" | "RESOLVED_FAIL" | "RESOLVED_RETAKE";
+  submitted_at: string;
+  system_confidence: string;
+  faculty_note?: string;
+  resolved_at?: string;
+}
+
+export interface CandidateItem {
+  candidate_id: string;
+  name: string;
+  trade: string;
+  institution: string;
+  composite_score: number;
+  verdict: string;
+  verified_badge: string;
+  verified_clip_duration: string;
+  hiring_status: string;
+  safety_score: number;
+  practical_speed_rank: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  actor: string;
+  details: string;
+}
+
+export interface BackendStore {
+  version: string;
+  lastUpdated: string;
+  activeUserId: string;
+  activeScorecardId: string;
+  users: Record<string, UserProfile>;
+  courses: Course[];
+  scorecards: Record<string, MasterScorecardReport>;
+  reviewQueue: QueueItem[];
+  candidates: CandidateItem[];
+  shortlistedCandidateIds: string[];
+  cohortHeatmap: CohortHeatmapData[];
+  auditLogs: AuditLog[];
+}
+
+const DATA_DIR = path.join(process.cwd(), "data");
+const STORAGE_FILE = path.join(DATA_DIR, "bridge_store.json");
+
+// Default initial dataset
+function createInitialData(): BackendStore {
+  return {
+    version: "2.0.0",
+    lastUpdated: new Date().toISOString(),
+    activeUserId: "STUDENT_ITI_DL_2026_042",
+    activeScorecardId: "rep_golden_sample_01",
+    users: {
+      "STUDENT_ITI_DL_2026_042": {
+        id: "STUDENT_ITI_DL_2026_042",
+        name: "Rajesh Kumar",
+        email: "rajesh.kumar@iti-delhi.edu.in",
+        role: "student",
+        isFirstTime: false,
+        institution: "Government Industrial Training Institute (ITI), Pusa, Delhi",
+        selectedCourseId: "course_electrician_nsqf4",
+        enrolledCourses: ["course_electrician_nsqf4", "course_solar_pv"],
+        completedCourses: []
+      },
+      "REC_SCHNEIDER_092": {
+        id: "REC_SCHNEIDER_092",
+        name: "Vikram Mehta",
+        email: "vikram.mehta@schneider-vendor.in",
+        role: "employee",
+        isFirstTime: false,
+        institution: "L&T / Schneider Electric Authorized Engineering Division"
+      },
+      "FAC_NSQF_SUNITA_01": {
+        id: "FAC_NSQF_SUNITA_01",
+        name: "Smt. Sunita Deshmukh",
+        email: "sunita.deshmukh@iti-eval.gov.in",
+        role: "faculty",
+        isFirstTime: false,
+        institution: "Senior Trade Instructor & Lead NSQF Master Assessor"
+      }
+    },
+    courses: [
+      {
+        id: "course_electrician_nsqf4",
+        title: "Industrial & Domestic Electrician (NSQF Level 4/5)",
+        tradeCode: "ELE_L4_DOMESTIC",
+        nsqfLevel: 4,
+        durationHours: 120,
+        description: "Hands-on mastery of 3-phase panels, MCB distribution, live-line de-energization protocols, and dielectric PPE safety compliance.",
+        iconName: "Zap",
+        skillsTaught: ["Zero-Potential Verification", "1000V Dielectric Glove Usage", "Conductor Stripping (0 nick)", "Terminal Torque & Pull Test"],
+        totalModules: 8,
+        completedModules: 3,
+        currentTaskTitle: "Module 4: MCB Distribution Wiring & Zero-Voltage Verification",
+        currentTaskId: "TASK_MCB_WIRING_01",
+        industryPartners: ["Schneider Electric", "L&T Heavy Engineering", "Siemens India", "Havells"],
+        badgeTitle: "NSQF Certified Industrial Wireman"
+      },
+      {
+        id: "course_solar_pv",
+        title: "Solar PV Rooftop & Grid-Tie Technician (NSQF Level 4)",
+        tradeCode: "SOL_L4_GRID",
+        nsqfLevel: 4,
+        durationHours: 90,
+        description: "DC string combiner wiring, inverter synchronization, ground-fault isolation, and solar irradiance array testing.",
+        iconName: "Sun",
+        skillsTaught: ["DC String Splicing", "Inverter MPPT Isolation", "Fall Protection Harness", "Ground Bonding Verification"],
+        totalModules: 6,
+        completedModules: 1,
+        currentTaskTitle: "Module 2: String Inverter DC Terminal Connection",
+        currentTaskId: "TASK_SOLAR_DC_02",
+        industryPartners: ["Tata Power Solar", "Adani Solar", "ReNew Power"],
+        badgeTitle: "Suryamitra Certified Solar PV Installer"
+      },
+      {
+        id: "course_ev_technician",
+        title: "Electric Vehicle (EV) Powertrain & Battery Service (NSQF Level 5)",
+        tradeCode: "AUT_L5_EV",
+        nsqfLevel: 5,
+        durationHours: 140,
+        description: "High-voltage traction battery pack servicing, contactor pre-charge troubleshooting, and BMS diagnostic communication.",
+        iconName: "BatteryCharging",
+        skillsTaught: ["HV Interlock Disconnect (MSD)", "Class 0 Arc-Flash PPE", "Cell Balancing Audit", "Coolant Leak Pressure Test"],
+        totalModules: 10,
+        completedModules: 0,
+        currentTaskTitle: "Module 1: High-Voltage Interlock Loop (HVIL) Isolation",
+        currentTaskId: "TASK_EV_HVIL_01",
+        industryPartners: ["Tata Motors Commercial", "Mahindra Last Mile", "Ola Electric"],
+        badgeTitle: "NSQF Certified High-Voltage EV Specialist"
+      },
+      {
+        id: "course_plc_automation",
+        title: "Industrial Automation & PLC Wireman (NSQF Level 5)",
+        tradeCode: "AUT_L5_PLC",
+        nsqfLevel: 5,
+        durationHours: 160,
+        description: "Control panel DIN-rail architecture, 24VDC sensor loop calibration, wire ferruling standards, and E-Stop safety circuits.",
+        iconName: "Cpu",
+        skillsTaught: ["Ferruling & Schematic Tracing", "Safety Relay Integration", "Noise Shield Grounding", "Loop Current Sinking"],
+        totalModules: 12,
+        completedModules: 0,
+        currentTaskTitle: "Module 1: DIN-Rail 24VDC Power Supply Wiring",
+        currentTaskId: "TASK_PLC_DIN_01",
+        industryPartners: ["Rockwell Automation", "ABB India", "Omron Industrial"],
+        badgeTitle: "Mechatronics & PLC Certified Wireman"
+      }
+    ],
+    scorecards: {
+      "rep_golden_sample_01": {
+        report_id: "rep_golden_sample_01",
+        created_at: new Date().toISOString(),
+        candidate_id: "STUDENT_ITI_DL_2026_042",
+        candidate_name: "Rajesh Kumar",
+        trade_info: {
+          trade_name: "Electrician",
+          nsqf_level: 4,
+          competency_code: "ELE/N0102",
+          trade_code: "ELE_L4_DOMESTIC"
+        },
+        composite_score: 76.5,
+        verdict: "CONDITIONAL_REMEDIATION_REQUIRED",
+        human_review_required: true,
+        uncertainty_flags: [
+          {
+            sub_system: "VISION_SEQUENCE_AGENT",
+            step_ref: "NOS_ELE_N0102_ST03",
+            timestamp_ms: 22400,
+            reason: "CAMERA_OCCLUSION_EXCEEDS_THRESHOLD",
+            action_taken: "ROUTED_TO_FACULTY_QUEUE"
+          }
+        ],
+        breakdown: {
+          safety_weight: 0.30,
+          sequence_weight: 0.45,
+          verbal_weight: 0.25,
+          safety_score: 65.0,
+          sequence_score: 82.0,
+          verbal_score: 88.0
+        },
+        micro_evidence_timeline: [
+          {
+            timestamp_ms: 4600,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "Mains Isolation Verified (0 V across L-N)",
+            source: "VIDEO & AUDIO",
+            penalty_points: 0.0,
+            frame_index: 7
+          },
+          {
+            timestamp_ms: 11800,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "Wire Stripped Cleanly (10mm, 0 strand nicks)",
+            source: "VIDEO",
+            penalty_points: 0.0,
+            frame_index: 18
+          },
+          {
+            timestamp_ms: 14200,
+            type: "VIOLATION",
+            status: "FAIL",
+            label: "Missing 1000V Insulated Safety Gloves",
+            source: "VISION_SAFETY_AGENT",
+            penalty_points: 25.0,
+            frame_index: 21,
+            bounding_box_norm: [0.42, 0.58, 0.71, 0.84]
+          },
+          {
+            timestamp_ms: 22400,
+            type: "FLAG",
+            status: "UNCERTAIN_EVIDENCE",
+            label: "Terminal Screw Torque Occluded (>40% by body)",
+            source: "VISION_SEQUENCE_AGENT",
+            penalty_points: 0.0,
+            frame_index: 34
+          },
+          {
+            timestamp_ms: 31200,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "Mechanical Pull-Test Verified (15N tug confirmed)",
+            source: "VIDEO",
+            penalty_points: 0.0,
+            frame_index: 47
+          }
+        ],
+        seven_day_remediation_plan: [
+          {
+            day: 1,
+            focus_area: "PPE Safety Compliance",
+            drill_description: "Perform 10 verified glove donning & dielectric seal inspection runs prior to touching terminal screws.",
+            estimated_minutes: 20,
+            completed: true
+          },
+          {
+            day: 2,
+            focus_area: "Camera Positioning & Visibility",
+            drill_description: "Set workshop phone tripod at 45° elevation angle to eliminate torso occlusion during screw driver torque rotation.",
+            estimated_minutes: 25,
+            completed: false
+          },
+          {
+            day: 3,
+            focus_area: "De-Energization Articulation",
+            drill_description: "Verbalize exact multimeter reading sequence: 'Testing L to N, L to E, N to E' before physical casing detachment.",
+            estimated_minutes: 15,
+            completed: false
+          },
+          {
+            day: 4,
+            focus_area: "Conductor Gauge Selection",
+            drill_description: "Practice 2.5 sq.mm copper wire stripping with automatic wire stripper set at exactly 11mm strip length.",
+            estimated_minutes: 30,
+            completed: false
+          },
+          {
+            day: 5,
+            focus_area: "Torque Calibration Check",
+            drill_description: "Use calibrated insulated torque screwdriver set to 2.2 Nm on miniature circuit breaker cage terminals.",
+            estimated_minutes: 25,
+            completed: false
+          },
+          {
+            day: 6,
+            focus_area: "Live-Simulation Mock Assessment",
+            drill_description: "Record 45-second uncut trade task with both dual-modal audio explanation and unobstructed camera capture.",
+            estimated_minutes: 35,
+            completed: false
+          },
+          {
+            day: 7,
+            focus_area: "Official NSQF Level 4 Re-Certification",
+            drill_description: "Submit live assessment clip through Bridge verification pipeline to unlock employers' verified badge.",
+            estimated_minutes: 20,
+            completed: false
+          }
+        ],
+        speech_audit: {
+          session_id: "aud_9f8d3c1a-6b2e-4f32-8a19-3f6284f69911",
+          transcript: "Before opening the distribution panel, I isolated the 32-amp main isolator switch and verified zero voltage across phase and neutral terminals with my digital multimeter.",
+          duration_seconds: 18.4,
+          overall_verbal_score: 88.0,
+          metrics: {
+            technical_terminology_score: 92.0,
+            procedural_coherence_score: 85.0,
+            safety_precaution_score: 87.0
+          },
+          keywords_detected: ["isolated", "32-amp main isolator switch", "zero voltage", "phase and neutral"],
+          missing_critical_terms: ["earthing continuity"],
+          reasoning_critique: "Candidate correctly articulated de-energization protocols but omitted confirmation of ground bonding verification."
+        },
+        safety_audit: {
+          ppe_score: 65.0,
+          is_compliant: false,
+          confidence_score: 0.94,
+          violations: [
+            {
+              timestamp_ms: 14200,
+              violation_code: "PPE_GLOVES_ABSENT",
+              severity: "CRITICAL",
+              label: "Missing 1000V Insulated Safety Gloves",
+              description: "Candidate handling live-side conductors without dielectric insulated gloves.",
+              bounding_box_norm: [0.42, 0.58, 0.71, 0.84],
+              frame_index: 21
+            }
+          ]
+        },
+        sequence_audit: {
+          procedural_score: 82.0,
+          steps_total: 4,
+          steps_completed: 3,
+          steps: [
+            {
+              step_order: 1,
+              nsqf_step_ref: "NOS_ELE_N0102_ST01",
+              name: "De-energization & Isolation",
+              status: "PASS",
+              timestamp_ms: 4600,
+              evidence_description: "Main isolator pulled down; multimeter proves 0.02V residual.",
+              tool_used: "Fluke 115 Multimeter"
+            },
+            {
+              step_order: 2,
+              nsqf_step_ref: "NOS_ELE_N0102_ST02",
+              name: "Conductor Stripping",
+              status: "PASS",
+              timestamp_ms: 11800,
+              evidence_description: "10mm PVC insulation stripped cleanly without nicking strands.",
+              tool_used: "Knipex Wire Stripper"
+            },
+            {
+              step_order: 3,
+              nsqf_step_ref: "NOS_ELE_N0102_ST03",
+              name: "Terminal Insertion & Torque",
+              status: "UNCERTAIN_EVIDENCE",
+              timestamp_ms: 22400,
+              evidence_description: "Insertion observed, but torque tightening occluded by operator's elbow.",
+              uncertainty_reason: "Camera occlusion >40% by candidate body"
+            },
+            {
+              step_order: 4,
+              nsqf_step_ref: "NOS_ELE_N0102_ST04",
+              name: "Mechanical Pull Test Verification",
+              status: "PASS",
+              timestamp_ms: 31200,
+              evidence_description: "Firm 15N downward pull executed with zero conductor displacement.",
+              tool_used: "Manual Test Tug"
+            }
+          ]
+        },
+        verification_badge: {
+          badge_id: "SB-NSQF-2026-9921",
+          issue_date: "Pending Remediation",
+          verifying_authority: "Directorate General of Training (DGT) / NSDC Electronic Audited",
+          clip_sample_ms: [4200, 7800]
+        }
+      },
+      "rep_certified_sample_02": {
+        report_id: "rep_certified_sample_02",
+        created_at: "2026-09-17T14:30:00Z",
+        candidate_id: "STUDENT_ITI_MH_2026_119",
+        candidate_name: "Amit Patel",
+        trade_info: {
+          trade_name: "Electrician",
+          nsqf_level: 4,
+          competency_code: "ELE/N0102",
+          trade_code: "ELE_L4_DOMESTIC"
+        },
+        composite_score: 94.5,
+        verdict: "CERTIFIED_COMPETENT",
+        human_review_required: false,
+        uncertainty_flags: [],
+        breakdown: {
+          safety_weight: 0.30,
+          sequence_weight: 0.45,
+          verbal_weight: 0.25,
+          safety_score: 96.0,
+          sequence_score: 95.0,
+          verbal_score: 92.0
+        },
+        micro_evidence_timeline: [
+          {
+            timestamp_ms: 3500,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "Class 0 1000V Dielectric Gloves Donned",
+            source: "VISION_SAFETY_AGENT",
+            penalty_points: 0.0,
+            frame_index: 5
+          },
+          {
+            timestamp_ms: 8200,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "Isolator Cutoff & 0V Lockout-Tagout Verified",
+            source: "VIDEO & AUDIO",
+            penalty_points: 0.0,
+            frame_index: 12
+          },
+          {
+            timestamp_ms: 16400,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "Clean Stripping & Ferruling Standard Met",
+            source: "VISION_SEQUENCE_AGENT",
+            penalty_points: 0.0,
+            frame_index: 24
+          },
+          {
+            timestamp_ms: 25100,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "2.4Nm Calibrated Torque Screw Engagement",
+            source: "VISION_SEQUENCE_AGENT",
+            penalty_points: 0.0,
+            frame_index: 38
+          },
+          {
+            timestamp_ms: 33800,
+            type: "CHECKPOINT",
+            status: "PASS",
+            label: "NSQF Compliant Pull-Test Resistance Passed",
+            source: "VISION_SEQUENCE_AGENT",
+            penalty_points: 0.0,
+            frame_index: 51
+          }
+        ],
+        seven_day_remediation_plan: [],
+        speech_audit: {
+          session_id: "aud_certified_9102",
+          transcript: "Applied lockout tagout on 32A main switch. Measured 0.00V across phase, neutral, and verified earth continuity. Wearing 1000V rated dielectric safety gloves and polycarbonate eye protection.",
+          duration_seconds: 19.1,
+          overall_verbal_score: 92.0,
+          metrics: {
+            technical_terminology_score: 95.0,
+            procedural_coherence_score: 91.0,
+            safety_precaution_score: 90.0
+          },
+          keywords_detected: ["lockout tagout", "main switch", "0.00V", "phase, neutral", "earth continuity", "1000V rated dielectric", "eye protection"],
+          missing_critical_terms: [],
+          reasoning_critique: "Flawless technical articulation covering safety equipment, de-energization, zero potential, and earth continuity."
+        },
+        safety_audit: {
+          ppe_score: 96.0,
+          is_compliant: true,
+          confidence_score: 0.98,
+          violations: []
+        },
+        sequence_audit: {
+          procedural_score: 95.0,
+          steps_total: 4,
+          steps_completed: 4,
+          steps: [
+            {
+              step_order: 1,
+              nsqf_step_ref: "NOS_ELE_N0102_ST01",
+              name: "De-energization & Isolation",
+              status: "PASS",
+              timestamp_ms: 8200,
+              evidence_description: "LOTO applied, zero voltage verified."
+            },
+            {
+              step_order: 2,
+              nsqf_step_ref: "NOS_ELE_N0102_ST02",
+              name: "Conductor Stripping",
+              status: "PASS",
+              timestamp_ms: 16400,
+              evidence_description: "Exact 11mm cut without copper deformation."
+            },
+            {
+              step_order: 3,
+              nsqf_step_ref: "NOS_ELE_N0102_ST03",
+              name: "Terminal Insertion & Torque",
+              status: "PASS",
+              timestamp_ms: 25100,
+              evidence_description: "Clear camera visibility, audible torque clutch slip at 2.4Nm."
+            },
+            {
+              step_order: 4,
+              nsqf_step_ref: "NOS_ELE_N0102_ST04",
+              name: "Mechanical Pull Test Verification",
+              status: "PASS",
+              timestamp_ms: 33800,
+              evidence_description: "Sustained pull test passed."
+            }
+          ]
+        },
+        verification_badge: {
+          badge_id: "SB-NSQF-2026-8819-AUTH",
+          issue_date: "2026-09-17",
+          verifying_authority: "Directorate General of Training (DGT) — NSQF Level 4 Verified",
+          clip_sample_ms: [7800, 11500]
+        }
+      }
+    },
+    reviewQueue: [
+      {
+        id: "queue_rev_001",
+        candidate_id: "STUDENT_ITI_DL_2026_042",
+        candidate_name: "Rajesh Kumar",
+        trade_name: "Electrician NSQF L4",
+        task: "MCB Distribution Wiring (TASK_MCB_WIRING_01)",
+        flag_type: "CAMERA_OCCLUSION_EXCEEDS_THRESHOLD",
+        reason: "Camera occlusion >40% by candidate body during terminal screw tightening.",
+        timestamp_ms: 22400,
+        status: "PENDING_FACULTY_DECISION",
+        submitted_at: "18 Sep 2026, 10:14 AM",
+        system_confidence: "UNCERTAIN_EVIDENCE"
+      },
+      {
+        id: "queue_rev_002",
+        candidate_id: "STUDENT_ITI_UP_2026_088",
+        candidate_name: "Pooja Sharma",
+        trade_name: "Solar PV Rooftop Technician",
+        task: "DC String Combiner Box Splicing",
+        flag_type: "LOW_ILLUMINATION_WARNING",
+        reason: "Lighting below 150 Lux at panel shadow. Cable ferrule labels could not be verified by vision agent.",
+        timestamp_ms: 18900,
+        status: "PENDING_FACULTY_DECISION",
+        submitted_at: "18 Sep 2026, 09:30 AM",
+        system_confidence: "UNCERTAIN_EVIDENCE"
+      },
+      {
+        id: "queue_rev_003",
+        candidate_id: "STUDENT_ITI_GJ_2026_015",
+        candidate_name: "Farhan Ali",
+        trade_name: "EV Battery Service NSQF L5",
+        task: "Manual Service Disconnect (MSD) Removal",
+        flag_type: "RAPID_MOTION_BLUR",
+        reason: "Hand motion speed exceeded shutter limit (>1.8 m/s). Pre-charge resistor check unconfirmed.",
+        timestamp_ms: 12300,
+        status: "PENDING_FACULTY_DECISION",
+        submitted_at: "17 Sep 2026, 04:15 PM",
+        system_confidence: "UNCERTAIN_EVIDENCE"
+      }
+    ],
+    candidates: [
+      {
+        candidate_id: "STUDENT_ITI_MH_2026_119",
+        name: "Amit Patel",
+        trade: "Electrician NSQF Level 4",
+        institution: "Govt ITI Mumbai Central",
+        composite_score: 94.5,
+        verdict: "CERTIFIED_COMPETENT",
+        verified_badge: "SB-NSQF-2026-8819-AUTH",
+        verified_clip_duration: "3.2s verified isolation & torque",
+        hiring_status: "Available for Immediate Plant Hire",
+        safety_score: 96,
+        practical_speed_rank: "Top 5%"
+      },
+      {
+        candidate_id: "STUDENT_ITI_DL_2026_042",
+        name: "Rajesh Kumar",
+        trade: "Electrician NSQF Level 4",
+        institution: "Govt ITI Pusa Delhi",
+        composite_score: 76.5,
+        verdict: "CONDITIONAL_REMEDIATION_REQUIRED",
+        verified_badge: "Under 7-Day Micro-Remediation",
+        verified_clip_duration: "Glove violation logged at 14.2s",
+        hiring_status: "Remediating PPE Compliance (Day 2/7)",
+        safety_score: 65,
+        practical_speed_rank: "Top 25%"
+      },
+      {
+        candidate_id: "STUDENT_ITI_TN_2026_204",
+        name: "Karthik Subramanian",
+        trade: "Automation & PLC Wireman L5",
+        institution: "Govt ITI Guindy Chennai",
+        composite_score: 91.0,
+        verdict: "CERTIFIED_COMPETENT",
+        verified_badge: "SB-NSQF-2026-7731-AUTH",
+        verified_clip_duration: "24VDC loop wiring verified",
+        hiring_status: "Shortlisted by Siemens India",
+        safety_score: 94,
+        practical_speed_rank: "Top 10%"
+      }
+    ],
+    shortlistedCandidateIds: ["STUDENT_ITI_MH_2026_119"],
+    cohortHeatmap: [
+      {
+        competencyCode: "NOS_ELE_N0102_02",
+        title: "Personal Protective Equipment (1000V Gloves)",
+        nsqfLevel: 4,
+        failureRate: 62,
+        criticalSafetyRisk: true,
+        traineesTested: 140,
+        topViolationReason: "Trainees removing gloves for fine screw manipulation"
+      },
+      {
+        competencyCode: "NOS_ELE_N0102_01",
+        title: "Mains Isolation & Zero-Potential Verification",
+        nsqfLevel: 4,
+        failureRate: 38,
+        criticalSafetyRisk: true,
+        traineesTested: 140,
+        topViolationReason: "Omitting earth-to-neutral residual voltage check"
+      },
+      {
+        competencyCode: "NOS_ELE_N0102_03",
+        title: "Clean Conductor Stripping (0 Nick Standard)",
+        nsqfLevel: 4,
+        failureRate: 41,
+        criticalSafetyRisk: false,
+        traineesTested: 140,
+        topViolationReason: "Using blunt pliers causing severed copper strands"
+      },
+      {
+        competencyCode: "NOS_ELE_N0102_04",
+        title: "Terminal Screw Torque & Mechanical Pull Test",
+        nsqfLevel: 4,
+        failureRate: 29,
+        criticalSafetyRisk: false,
+        traineesTested: 140,
+        topViolationReason: "Insufficient torque resulting in loose terminal contact"
+      },
+      {
+        competencyCode: "NOS_SOL_N0201_01",
+        title: "DC String Open-Circuit Voltage Polarity Check",
+        nsqfLevel: 4,
+        failureRate: 45,
+        criticalSafetyRisk: true,
+        traineesTested: 92,
+        topViolationReason: "Reverse polarity measurement without arc-rated shield"
+      },
+      {
+        competencyCode: "NOS_AUT_N0304_02",
+        title: "High-Voltage Interlock Loop (HVIL) Disconnect",
+        nsqfLevel: 5,
+        failureRate: 54,
+        criticalSafetyRisk: true,
+        traineesTested: 68,
+        topViolationReason: "Premature high-voltage manual service disconnect removal"
+      }
+    ],
+    auditLogs: [
+      {
+        id: "log_init",
+        timestamp: new Date().toISOString(),
+        action: "STORE_BOOTSTRAP",
+        actor: "SYSTEM",
+        details: "Bridge Backend Storage initialized successfully"
+      }
+    ]
+  };
+}
+
+class StorageEngine {
+  private store: BackendStore;
+  private isPersisting: boolean = false;
+
+  constructor() {
+    this.store = this.loadFromDisk();
+  }
+
+  private loadFromDisk(): BackendStore {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+
+      if (fs.existsSync(STORAGE_FILE)) {
+        const raw = fs.readFileSync(STORAGE_FILE, "utf-8");
+        const parsed = JSON.parse(raw) as BackendStore;
+        console.log(`[StorageEngine] Loaded backend stored data from ${STORAGE_FILE}`);
+        return parsed;
+      }
+    } catch (err) {
+      console.warn("[StorageEngine] Failed to read from disk, creating fresh store:", err);
+    }
+
+    const initial = createInitialData();
+    this.saveToDisk(initial);
+    return initial;
+  }
+
+  private saveToDisk(data: BackendStore): void {
+    try {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      data.lastUpdated = new Date().toISOString();
+      const tmpPath = `${STORAGE_FILE}.tmp`;
+      fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+      fs.renameSync(tmpPath, STORAGE_FILE);
+    } catch (err) {
+      console.error("[StorageEngine] Error saving to disk:", err);
+    }
+  }
+
+  private persist(action: string, actor: string = "SYSTEM", details: string = ""): void {
+    this.store.auditLogs.unshift({
+      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+      action,
+      actor,
+      details
+    });
+    // Keep max 100 audit logs
+    if (this.store.auditLogs.length > 100) {
+      this.store.auditLogs = this.store.auditLogs.slice(0, 100);
+    }
+    this.saveToDisk(this.store);
+  }
+
+  // Get full state
+  public getFullStore(): BackendStore {
+    return this.store;
+  }
+
+  // User methods
+  public getUser(id: string): UserProfile | null {
+    return this.store.users[id] || null;
+  }
+
+  public getUsers(): UserProfile[] {
+    return Object.values(this.store.users);
+  }
+
+  public saveUser(user: UserProfile): UserProfile {
+    this.store.users[user.id] = user;
+    this.persist("USER_SAVE", user.id, `Updated profile for ${user.name} (${user.role})`);
+    return user;
+  }
+
+  public setActiveUser(userId: string): void {
+    if (this.store.users[userId]) {
+      this.store.activeUserId = userId;
+      this.persist("ACTIVE_USER_SET", userId, `Switched active user to ${userId}`);
+    }
+  }
+
+  // Courses methods
+  public getCourses(): Course[] {
+    return this.store.courses;
+  }
+
+  public updateCourse(courseId: string, updates: Partial<Course>): Course | null {
+    const idx = this.store.courses.findIndex(c => c.id === courseId);
+    if (idx === -1) return null;
+    this.store.courses[idx] = { ...this.store.courses[idx], ...updates };
+    this.persist("COURSE_UPDATE", courseId, `Updated course ${courseId}: ${Object.keys(updates).join(", ")}`);
+    return this.store.courses[idx];
+  }
+
+  public updateCourseCompletedModules(courseId: string, count: number): Course | null {
+    const course = this.store.courses.find(c => c.id === courseId || c.tradeCode === courseId);
+    if (!course) return null;
+    course.completedModules = Math.max(0, Math.min(course.totalModules, count));
+    this.persist("COURSE_PROGRESS", course.id, `Set completed modules to ${count}/${course.totalModules}`);
+    return course;
+  }
+
+  // Scorecards methods
+  public getScorecards(): MasterScorecardReport[] {
+    return Object.values(this.store.scorecards);
+  }
+
+  public getScorecard(id: string): MasterScorecardReport | null {
+    return this.store.scorecards[id] || null;
+  }
+
+  public saveScorecard(report: MasterScorecardReport): MasterScorecardReport {
+    this.store.scorecards[report.report_id] = report;
+    this.store.activeScorecardId = report.report_id;
+
+    // Automatically check if candidate exists in candidate pool or needs updating
+    const existingCandidate = this.store.candidates.find(c => c.candidate_id === report.candidate_id);
+    if (existingCandidate) {
+      existingCandidate.composite_score = report.composite_score;
+      existingCandidate.verdict = report.verdict;
+      existingCandidate.safety_score = report.breakdown.safety_score || existingCandidate.safety_score;
+    } else if (report.candidate_id && report.candidate_name) {
+      this.store.candidates.push({
+        candidate_id: report.candidate_id,
+        name: report.candidate_name,
+        trade: report.trade_info.trade_name,
+        institution: "Government ITI Evaluated Candidate",
+        composite_score: report.composite_score,
+        verdict: report.verdict,
+        verified_badge: report.verification_badge?.badge_id || "Under Verification",
+        verified_clip_duration: "Verified assessment clip",
+        hiring_status: report.verdict === "CERTIFIED_COMPETENT" ? "Available for Plant Hire" : "Under Remediation",
+        safety_score: Math.round(report.breakdown.safety_score || 70),
+        practical_speed_rank: "Top 20%"
+      });
+    }
+
+    // If human review is required or uncertain flags exist, add to review queue
+    if (report.human_review_required || (report.uncertainty_flags && report.uncertainty_flags.length > 0)) {
+      const topFlag = report.uncertainty_flags[0];
+      const queueId = `queue_${report.report_id}`;
+      if (!this.store.reviewQueue.some(q => q.id === queueId)) {
+        this.store.reviewQueue.unshift({
+          id: queueId,
+          candidate_id: report.candidate_id,
+          candidate_name: report.candidate_name || "Trainee",
+          trade_name: report.trade_info.trade_name,
+          task: report.trade_info.competency_code || "Trade Assessment",
+          flag_type: topFlag?.reason || "FLAGGED_FOR_HUMAN_AUDIT",
+          reason: topFlag?.action_taken || "Routed to faculty queue for verification",
+          timestamp_ms: topFlag?.timestamp_ms || 14200,
+          status: "PENDING_FACULTY_DECISION",
+          submitted_at: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+          system_confidence: "UNCERTAIN_EVIDENCE"
+        });
+      }
+    }
+
+    this.persist("SCORECARD_SAVE", report.report_id, `Scorecard ${report.report_id} saved with verdict ${report.verdict} (${report.composite_score}%)`);
+    return report;
+  }
+
+  public updateRemediation(reportId: string, day: number, completed?: boolean): MasterScorecardReport | null {
+    const report = this.store.scorecards[reportId];
+    if (!report) return null;
+    report.seven_day_remediation_plan = report.seven_day_remediation_plan.map(item => {
+      if (item.day === day) {
+        return { ...item, completed: completed !== undefined ? completed : !item.completed };
+      }
+      return item;
+    });
+    this.persist("REMEDIATION_UPDATE", reportId, `Day ${day} remediation marked as ${completed}`);
+    return report;
+  }
+
+  // Faculty Review Queue methods
+  public getReviewQueue(): QueueItem[] {
+    return this.store.reviewQueue;
+  }
+
+  public resolveQueueItem(id: string, decision: "PASS" | "FAIL" | "RETAKE", note?: string): QueueItem | null {
+    const item = this.store.reviewQueue.find(q => q.id === id);
+    if (!item) return null;
+    item.status = `RESOLVED_${decision}` as any;
+    item.faculty_note = note || `Faculty assessed: Decision ${decision}`;
+    item.resolved_at = new Date().toISOString();
+    this.persist("QUEUE_RESOLVE", id, `Resolved as ${decision}. Note: ${item.faculty_note}`);
+    return item;
+  }
+
+  // Candidates & Shortlist
+  public getCandidates(): CandidateItem[] {
+    return this.store.candidates;
+  }
+
+  public getShortlistedIds(): string[] {
+    return this.store.shortlistedCandidateIds;
+  }
+
+  public toggleShortlist(candidateId: string): string[] {
+    if (this.store.shortlistedCandidateIds.includes(candidateId)) {
+      this.store.shortlistedCandidateIds = this.store.shortlistedCandidateIds.filter(id => id !== candidateId);
+    } else {
+      this.store.shortlistedCandidateIds.push(candidateId);
+    }
+    this.persist("SHORTLIST_TOGGLE", candidateId, `Toggled shortlist for ${candidateId}`);
+    return this.store.shortlistedCandidateIds;
+  }
+
+  // Heatmap
+  public getCohortHeatmap(): CohortHeatmapData[] {
+    return this.store.cohortHeatmap;
+  }
+
+  // Storage Stats
+  public getStats() {
+    let fileSize = 0;
+    try {
+      if (fs.existsSync(STORAGE_FILE)) {
+        fileSize = fs.statSync(STORAGE_FILE).size;
+      }
+    } catch {}
+
+    return {
+      status: "healthy",
+      storage_type: "JSON_FILE_BACKED",
+      storage_path: STORAGE_FILE,
+      file_size_bytes: fileSize,
+      last_updated: this.store.lastUpdated,
+      counts: {
+        users: Object.keys(this.store.users).length,
+        courses: this.store.courses.length,
+        scorecards: Object.keys(this.store.scorecards).length,
+        review_queue: this.store.reviewQueue.length,
+        candidates: this.store.candidates.length,
+        shortlisted: this.store.shortlistedCandidateIds.length,
+        audit_logs: this.store.auditLogs.length
+      }
+    };
+  }
+
+  // Reset to default seed data
+  public resetDefaults(): BackendStore {
+    const initial = createInitialData();
+    initial.auditLogs.unshift({
+      id: `log_reset_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      action: "RESET_TO_DEFAULTS",
+      actor: "ADMIN",
+      details: "Backend data store reset to factory default demonstration data"
+    });
+    this.store = initial;
+    this.saveToDisk(this.store);
+    return this.store;
+  }
+}
+
+export const storage = new StorageEngine();

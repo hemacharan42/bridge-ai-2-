@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    background-color: #000000;
+    color: #f8fafc;
+    font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+}
+
+/* Responsive 3D Glassmorphism Cards */
+.card-3d-wrapper {
+  perspective: 800px;
+}
+
+.card-3d {
+  transform-style: preserve-3d;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0.4, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-3d-content {
+  transform: translateZ(15px);
+}
+
+.card-3d-icon {
+  transform: translateZ(25px);
+}
+
+/* Cosmic Ambient Vignette */
+.cosmic-vignette {
+  background: radial-gradient(circle at 50% 40%, rgba(245, 158, 11, 0.08) 0%, rgba(6, 182, 212, 0.05) 35%, rgba(0, 0, 0, 0.75) 70%, rgba(0, 0, 0, 0.98) 100%);
+}
+
+.glow-cyan {
+  text-shadow: 0 0 16px rgba(34, 211, 238, 0.7);
+}
+
+.glow-amber {
+  text-shadow: 0 0 16px rgba(251, 191, 36, 0.7);
+}
+
+/* =========================================================================
+ * SKILL MASTERY 100% SHINE & GLOW ANIMATIONS
+ * Specular light gleam sweeping diagonally across mastered badges
+ * ========================================================================= */
+@keyframes badgeShineSweep {
+  0% {
+    transform: translateX(-140%) skewX(-20deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateX(220%) skewX(-20deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes badgeGoldAura {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.25), inset 0 0 6px rgba(251, 191, 36, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.65), inset 0 0 12px rgba(251, 191, 36, 0.35);
+  }
+}
+
+@keyframes starSparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.25) rotate(15deg);
+  }
+}
+
+.animate-badge-shine {
+  animation: badgeShineSweep 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-badge-glow {
+  animation: badgeGoldAura 2.2s ease-in-out infinite;
+}
+
+.animate-star-sparkle {
+  animation: starSparkle 2s ease-in-out infinite;
+}
+
+/* =========================================================================
+ * 3D-DEPTH SPATIAL PERSPECTIVE STYLES
+ * High-performance hardware-accelerated CSS transforms when 3d-depth is active
+ * ========================================================================= */
+.perspective-container-3d {
+  perspective: 1200px;
+  perspective-origin: 50% 30%;
+}
+
+.perspective-container-flat {
+  perspective: none;
+}
+
+/* Card in 3D Mode */
+.card-depth-3d {
+  transform-style: preserve-3d;
+  transform: perspective(1000px) rotateX(1.8deg) rotateY(-1.2deg) translateZ(0);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease;
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.card-depth-3d:hover {
+  transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(16px) translateY(-4px);
+  box-shadow: 0 24px 48px -12px rgba(6, 182, 212, 0.18), 0 0 20px 2px rgba(6, 182, 212, 0.12), 0 0 1px 1px rgba(6, 182, 212, 0.3);
+}
+
+/* Candidate Card in 3D Mode */
+.candidate-card-3d {
+  transform-style: preserve-3d;
+  transform: perspective(900px) translateZ(0);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease, border-color 0.25s ease;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.65);
+}
+
+.candidate-card-3d:hover {
+  transform: perspective(900px) translateZ(14px) translateY(-5px) rotateX(1deg);
+  box-shadow: 0 22px 42px -10px rgba(0, 0, 0, 0.85), 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+/* Critical Safety Hazard Anomaly Pulse in 3D */
+.hazard-card-3d {
+  transform-style: preserve-3d;
+  transform: perspective(900px) translateZ(4px);
+  box-shadow: 0 12px 30px -8px rgba(225, 29, 72, 0.35), 0 0 14px rgba(244, 63, 94, 0.25);
+}
+
+.hazard-card-3d:hover {
+  transform: perspective(900px) translateZ(18px) translateY(-5px);
+  box-shadow: 0 24px 46px -8px rgba(225, 29, 72, 0.5), 0 0 24px rgba(244, 63, 94, 0.4);
+}
+
+/* Flat Mode Neutralization */
+.card-depth-flat {
+  transform: none !important;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Z-Elevated Badge / Metric Float in 3D */
+.float-metric-3d {
+  transform: translateZ(22px);
+  transform-style: preserve-3d;
+}
+
+/* 3-Layer Floating Depth Glassmorphism UI Effects */
+.glass-panel-3d {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 15, 29, 0.85) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-panel-floating {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.85),
+    0 0 25px 2px rgba(6, 182, 212, 0.12),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.glow-cyan-text {
+  text-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+}
+
+.glow-amber-text {
+  text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+

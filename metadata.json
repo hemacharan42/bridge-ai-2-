@@ -1,0 +1,11 @@
+{
+  "name": "Remix Remix Remix BRIDGE",
+  "description": "Bridging gaps between traditional learning and market requirements with mobile-optimized dual-evidence skill verification.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

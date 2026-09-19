@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="22" fill="#070b14"/>
+  <!-- Cap -->
+  <polygon points="50,14 68,23 50,32 32,23" fill="#2563eb" stroke="#38bdf8" stroke-width="1.8"/>
+  <path d="M40,27 C40,27 44,35 50,35 C56,35 60,27 60,27 L60,29 C60,37 56,40 50,40 C44,40 40,37 40,29 Z" fill="#1d4ed8"/>
+  <circle cx="50" cy="23" r="1.5" fill="#fde047"/>
+  <!-- Left Bridge Tower -->
+  <line x1="28" y1="28" x2="28" y2="76" stroke="#06b6d4" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="33" y1="33" x2="33" y2="76" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
+  <path d="M28,30 Q16,50 8,66" stroke="#38bdf8" stroke-width="2" fill="none"/>
+  <line x1="22" y1="42" x2="22" y2="70" stroke="#06b6d4" stroke-width="1.2"/>
+  <line x1="16" y1="52" x2="16" y2="74" stroke="#06b6d4" stroke-width="1.2"/>
+  <!-- Right Bridge Tower -->
+  <line x1="72" y1="28" x2="72" y2="76" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="67" y1="33" x2="67" y2="76" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+  <path d="M72,30 Q84,50 92,66" stroke="#f59e0b" stroke-width="2" fill="none"/>
+  <line x1="78" y1="42" x2="78" y2="70" stroke="#f59e0b" stroke-width="1.2"/>
+  <line x1="84" y1="52" x2="84" y2="74" stroke="#f59e0b" stroke-width="1.2"/>
+  <!-- Central Arches -->
+  <path d="M33,56 C40,46 45,42 50,42 C55,42 60,46 67,56" stroke="#38bdf8" stroke-width="2.5" fill="none"/>
+  <path d="M36,60 C42,52 46,48 50,48 C54,48 58,52 64,60" stroke="#fde047" stroke-width="1.5" fill="none"/>
+  <!-- Roadway -->
+  <path d="M48,50 C45,62 42,70 50,78 C54,82 52,86 42,92 L56,92 C65,86 68,78 62,70 C58,62 52,50 48,50 Z" fill="#0a2540"/>
+  <path d="M47,50 C44,60 41,72 49,80 C55,86 52,90 38,95" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M53,50 C60,60 65,70 61,78 C57,84 46,88 56,95" stroke="#f59e0b" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <!-- Dashed Highway Centerline -->
+  <line x1="49" y1="56" x2="49" y2="60" stroke="#fef08a" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="50" y1="65" x2="51" y2="70" stroke="#fef08a" stroke-width="1.4" stroke-linecap="round"/>
+  <line x1="53" y1="76" x2="49" y2="84" stroke="#fef08a" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Bottom Foundations -->
+  <path d="M6,78 C18,74 30,76 44,82" stroke="#06b6d4" stroke-width="2" stroke-linecap="round"/>
+  <path d="M94,78 C82,74 70,76 56,82" stroke="#eab308" stroke-width="2" stroke-linecap="round"/>
+</svg>
