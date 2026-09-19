@@ -202,10 +202,16 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                     </button>
 
                     <div>
-                      <div className="text-[10px] font-mono text-cyan-400 font-bold mb-1">
-                        Level {c.nsqf_level || 4}
+                      <div className="flex items-center justify-between mb-1.5 pr-6">
+                        <span className="text-[10px] font-mono text-cyan-400 font-bold block bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                          NSQF Level {c.nsqf_level || 4}
+                        </span>
+                        <span className="text-[9.5px] font-mono text-slate-400 block truncate">
+                          ID: {c.student_id || c.candidate_id}
+                        </span>
                       </div>
-                      <h4 className="text-sm font-bold text-white truncate pr-5">
+
+                      <h4 className="text-sm font-bold text-white truncate">
                         {c.name}
                       </h4>
                       <p className="text-[11px] text-slate-400 font-light truncate mt-0.5">
@@ -713,9 +719,18 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                       className="p-3 rounded-2xl bg-slate-950 hover:bg-slate-800/80 border border-slate-800 hover:border-cyan-500/40 transition-all cursor-pointer flex items-center justify-between gap-3 group"
                     >
                       <div className="min-w-0 flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 group-hover:border-cyan-500/40 flex items-center justify-center text-xs font-mono font-bold text-cyan-400 shrink-0">
-                          L{candidate.nsqf_level || 4}
-                        </div>
+                        {candidate.avatar_url ? (
+                          <img
+                            src={candidate.avatar_url}
+                            alt={candidate.name}
+                            referrerPolicy="no-referrer"
+                            className="w-9 h-9 rounded-full object-cover border border-cyan-500/40 shrink-0 shadow"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-slate-900 border border-slate-800 group-hover:border-cyan-500/40 flex items-center justify-center text-xs font-mono font-bold text-cyan-400 shrink-0">
+                            L{candidate.nsqf_level || 4}
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <h4 className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
@@ -729,6 +744,9 @@ export const CandidateComparisonMatrix: React.FC<CandidateComparisonMatrixProps>
                           </div>
                           <div className="text-[11px] text-slate-400 truncate">
                             {candidate.institution} • <span className="text-slate-300">{candidate.trade}</span>
+                          </div>
+                          <div className="text-[10px] font-mono text-cyan-400/80">
+                            ID: {candidate.student_id || candidate.candidate_id}
                           </div>
                         </div>
                       </div>

@@ -180,6 +180,8 @@ export interface CohortHeatmapData {
 export interface CandidateItem {
   candidate_id: string;
   name: string;
+  avatar_url?: string;
+  student_id?: string;
   trade: string;
   institution: string;
   composite_score: number;
@@ -271,17 +273,30 @@ export interface BackendStats {
 // 4 DISTINCT SUB-AGENTS DEFINITIONS
 // =========================================================================
 
-// Agent 1: Live Video & Audio Proctoring Sub-Agent
+// Agent 1: Live Video & Audio Proctoring Sub-Agent (Real-Time + Cloud Vision Layer)
 export type ProctoringViolationType = 
   | "GAZE_DEVIATION" 
+  | "SUSTAINED_LOOK_AWAY"
   | "MULTIPLE_FACES" 
   | "FACE_ABSENT" 
-  | "AUDIO_DISRUPTION";
+  | "NO_FACE"
+  | "HEAD_TURNED_AWAY"
+  | "TAB_SWITCH"
+  | "WINDOW_UNFOCUSED"
+  | "FULLSCREEN_EXITED"
+  | "CLIPBOARD_ATTEMPT"
+  | "AUDIO_ANOMALY" 
+  | "AUDIO_DISRUPTION"
+  | "AI_SCENE_FLAG"
+  | "PHONE_DETECTED"
+  | "NOTES_DETECTED"
+  | "CAMERA_OBSTRUCTED";
 
 export type ProctoringStatusType = 
   | "CLEAR" 
   | "DISTRACTION_DETECTED" 
-  | "DISRUPTION_DETECTED";
+  | "DISRUPTION_DETECTED"
+  | "HIGH_RISK_VIOLATION";
 
 export interface ProctoringViolation {
   type: ProctoringViolationType;
@@ -299,6 +314,49 @@ export interface ProctoringEvaluationResult {
   trigger_mentor_alert: boolean;
   mentor_notified: boolean;
   reason?: string;
+}
+
+export interface GeminiSceneVerdict {
+  person_count: number;
+  phone_or_device_visible: boolean;
+  notes_or_paper_visible: boolean;
+  candidate_looking_at_screen: boolean | "unclear";
+  camera_obstructed: boolean;
+  confidence: number;
+  notes: string;
+}
+
+export interface ProctoringViolationEvent {
+  id: string;
+  session_id: string;
+  type: ProctoringViolationType;
+  ts: number;
+  timestamp_formatted: string;
+  source: "local" | "gemini";
+  meta: Record<string, any>;
+  reviewer_status: "PENDING" | "ACCEPTED" | "DISMISSED" | "ESCALATED";
+  snapshot_url?: string;
+  severity: "LOW" | "MEDIUM" | "HIGH";
+  title: string;
+  description: string;
+}
+
+export interface ProctoringSession {
+  id: string;
+  candidate_id: string;
+  candidate_name: string;
+  exam_id: string;
+  exam_title: string;
+  started_at: string;
+  ended_at?: string;
+  status: "SETUP" | "CALIBRATION" | "IN_PROGRESS" | "COMPLETED" | "FLAGGED_REVIEW";
+  trust_score: number;
+  soft_warnings: number;
+  max_warnings: number;
+  total_violations: number;
+  video_url?: string;
+  calibrated: boolean;
+  lighting_score: number;
 }
 
 // Agent 2: Multimodal Barcode Verification Agent

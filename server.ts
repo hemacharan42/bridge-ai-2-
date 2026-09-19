@@ -9,6 +9,7 @@ import {
   speechEngine, 
   dualModalEngine 
 } from "./server/subagents";
+import { proctoringService } from "./server/proctoringService";
 
 dotenv.config();
 
@@ -425,6 +426,78 @@ app.post("/api/v1/proctor/reset", (req: Request, res: Response) => {
 
 app.get("/api/v1/proctor/status", (req: Request, res: Response) => {
   res.json(proctoringEngine.getStatus());
+});
+
+// =========================================================================
+// PROCTORING ASSESSMENT LAYER (Real-Time + Google AI Studio Gemini Vision)
+// Implements Step 6 & 7: Backend event & media ingestion and periodic snapshot review
+// =========================================================================
+
+// POST /api/sessions/:sessionId/snapshot - Periodic JPEG frame analysis via Gemini 2.5 Flash
+app.post("/api/sessions/:sessionId/snapshot", async (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const { file, image_base64, scenario } = req.body;
+    const imagePayload = image_base64 || file;
+
+    const result = await proctoringService.reviewFrameWithGemini(sessionId, imagePayload, scenario);
+    res.json({
+      ok: true,
+      sessionId,
+      verdict: result.verdict,
+      flagged: result.flagged,
+      violationEvent: result.violationEvent
+    });
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// Direct scene check helper endpoint
+app.post("/api/proctor/scene-check", async (req: Request, res: Response) => {
+  try {
+    const { sessionId = "sess_current", image_base64, scenario } = req.body;
+    const result = await proctoringService.reviewFrameWithGemini(sessionId, image_base64, scenario);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// POST /api/sessions/:sessionId/events - Log local/on-device debounced violation event
+app.post("/api/sessions/:sessionId/events", (req: Request, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+    const event = proctoringService.logEvent(sessionId, req.body);
+    res.json({ ok: true, event });
+  } catch (error) {
+    res.status(500).json({ error: String(error) });
+  }
+});
+
+// GET /api/sessions/:sessionId/events - Retrieve all timeline violation events
+app.get("/api/sessions/:sessionId/events", (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const session = proctoringService.getOrCreateSession(sessionId);
+  res.json({ sessionId, events: session.events });
+});
+
+// GET /api/sessions/:sessionId - Retrieve full session state, trust score & snapshots
+app.get("/api/sessions/:sessionId", (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const session = proctoringService.getOrCreateSession(sessionId);
+  res.json(session);
+});
+
+// POST /api/sessions/:sessionId/review - Human-in-the-loop reviewer decision (Accept/Dismiss/Escalate)
+app.post("/api/sessions/:sessionId/review", (req: Request, res: Response) => {
+  const { sessionId } = req.params;
+  const { eventId, decision, notes } = req.body;
+  const success = proctoringService.updateReviewDecision(sessionId, eventId, decision, notes);
+  if (!success) {
+    return res.status(404).json({ error: "Session or violation event not found" });
+  }
+  res.json({ ok: true, sessionId, eventId, decision });
 });
 
 // Sub-Agent 2: Multimodal Barcode Verification

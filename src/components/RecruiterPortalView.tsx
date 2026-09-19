@@ -174,8 +174,9 @@ export const RecruiterPortalView: React.FC = () => {
       const matchTrade = c.trade.toLowerCase().includes(q);
       const matchInst = c.institution.toLowerCase().includes(q);
       const matchId = c.candidate_id.toLowerCase().includes(q);
+      const matchStudentId = c.student_id ? c.student_id.toLowerCase().includes(q) : false;
       const matchSkills = c.key_skills?.some((s) => s.toLowerCase().includes(q));
-      if (!matchName && !matchTrade && !matchInst && !matchId && !matchSkills) {
+      if (!matchName && !matchTrade && !matchInst && !matchId && !matchStudentId && !matchSkills) {
         return false;
       }
     }
@@ -568,11 +569,11 @@ export const RecruiterPortalView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Candidate Header & Compare Checkbox */}
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <div className="min-w-0 pr-2">
+                  {/* Candidate Header & Compare Checkbox (Matching User Design) */}
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors truncate">
+                        <h3 className="text-base font-bold text-white group-hover:text-cyan-400 transition-colors truncate">
                           {candidate.name}
                         </h3>
                         {isShortlisted && (
@@ -581,13 +582,17 @@ export const RecruiterPortalView: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] font-mono text-slate-400 block mt-0.5 truncate">
+                      <span className="text-xs text-slate-400 font-medium block truncate mt-0.5">
                         {candidate.institution}
+                      </span>
+                      <span className="text-[10.5px] font-mono text-cyan-400/90 block truncate mt-0.5">
+                        ID: {candidate.student_id || candidate.candidate_id}
                       </span>
                     </div>
 
+                    {/* Right side: Score badge & Scale icon button */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full font-bold ${
+                      <span className={`text-xs font-mono px-2.5 py-1 rounded-full font-bold ${
                         isCertified
                           ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
                           : hasPpeViolation
@@ -597,18 +602,18 @@ export const RecruiterPortalView: React.FC = () => {
                         {candidate.composite_score}%
                       </span>
 
-                      {/* Compare Checkbox Toggle */}
+                      {/* Compare Checkbox Toggle with cyan pill */}
                       <button
                         type="button"
                         onClick={() => toggleCompareCandidate(candidate.candidate_id)}
-                        className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                        className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
                           isCompared
-                            ? "bg-cyan-500 text-slate-950 border-cyan-400 shadow-sm shadow-cyan-500/30"
-                            : "bg-slate-950 text-slate-500 border-slate-800 hover:border-slate-700 hover:text-slate-300"
+                            ? "bg-cyan-500 text-slate-950 border-cyan-400 shadow-md shadow-cyan-500/30"
+                            : "bg-cyan-950/40 text-cyan-400 border-cyan-800/60 hover:bg-cyan-900/50 hover:border-cyan-600"
                         }`}
                         title={isCompared ? "Remove from comparison matrix" : "Add to side-by-side comparison"}
                       >
-                        <Scale className="w-3.5 h-3.5" />
+                        <Scale className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -794,15 +799,15 @@ export const RecruiterPortalView: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
 
-            {/* Modal Header */}
+            {/* Modal Header with Student Info & ID */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pr-10">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                    NSQF AUDIT DOSSIER INSPECTION
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold">
+                    NSQF AUDIT DOSSIER
                   </span>
-                  <span className="text-xs font-mono text-slate-400">
-                    ID: {inspectedCandidate.candidate_id}
+                  <span className="text-xs font-mono text-cyan-300 font-bold bg-slate-800/80 px-2 py-0.5 rounded-md border border-slate-700">
+                    ID: {inspectedCandidate.student_id || inspectedCandidate.candidate_id}
                   </span>
                 </div>
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">

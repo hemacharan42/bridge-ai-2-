@@ -16,7 +16,10 @@ import {
   Database,
   Box,
   Square,
-  Eye
+  Eye,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelLeft
 } from "lucide-react";
 import { useAssessment } from "../../store/assessmentContext";
 import { useScorecard } from "../../store/ScorecardContext";
@@ -82,17 +85,23 @@ export const PostLoginShell: React.FC<PostLoginShellProps> = ({
     }
   };
 
-  // Scroll detection: auto-open at start (top) and auto-close when user scrolls
+  // Keyboard shortcut (Ctrl+B / Cmd+B) to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setIsSidebarOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Track scroll position purely for subtle shadow/border elevation without altering sidebar state
   useEffect(() => {
     const handleScrollPosition = (scrollTop: number) => {
-      const atTop = scrollTop <= 30;
+      const atTop = scrollTop <= 20;
       setIsScrolled(!atTop);
-
-      if (!atTop) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
     };
 
     const handleMainScroll = () => {
@@ -118,25 +127,6 @@ export const PostLoginShell: React.FC<PostLoginShellProps> = ({
       window.removeEventListener("scroll", handleWinScroll);
     };
   }, []);
-
-  // Hover handlers for smooth opening & closing
-  const handleMouseEnterSidebar = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    setIsSidebarOpen(true);
-  };
-
-  const handleMouseLeaveSidebar = () => {
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-    }
-    // Smooth delay before closing to avoid accidental flickers
-    hoverTimeoutRef.current = setTimeout(() => {
-      // If user is scrolled, close on mouse leave
-      setIsSidebarOpen(false);
-    }, 150);
-  };
 
   const allNavItems = [
     {
@@ -215,12 +205,10 @@ export const PostLoginShell: React.FC<PostLoginShellProps> = ({
     <div className="h-screen w-screen bg-black text-slate-100 flex flex-col md:flex-row font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-hidden relative">
       
       {/* =========================================================================
-       * COLLAPSIBLE SIDE TASKBAR (Opens on Hover, Closes on Mouse Leave)
+       * COLLAPSIBLE SIDE TASKBAR (Opens on Start of Page, Closes on Scroll & Click)
        * ========================================================================= */}
       <aside 
         id="side-taskbar"
-        onMouseEnter={handleMouseEnterSidebar}
-        onMouseLeave={handleMouseLeaveSidebar}
         className={`bg-slate-950/95 border-b md:border-b-0 md:border-r border-slate-800/80 backdrop-blur-xl flex flex-col justify-between shrink-0 z-40 transition-all duration-300 ease-in-out relative ${
           isSidebarOpen 
             ? "w-full md:w-64 lg:w-72 shadow-2xl md:shadow-cyan-950/20" 
@@ -258,27 +246,60 @@ export const PostLoginShell: React.FC<PostLoginShellProps> = ({
                   </div>
                 </button>
 
-                {/* Mobile Menu Toggle (Only on mobile) */}
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="md:hidden p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 cursor-pointer"
-                >
-                  {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-                </button>
+                {/* Right Header Action: Close Sidebar Button (Desktop) & Mobile Menu Toggle */}
+                <div className="flex items-center gap-1">
+                  <div className="relative group/close hidden md:block">
+                    <button
+                      type="button"
+                      id="close-sidebar-btn"
+                      onClick={() => setIsSidebarOpen(false)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 border border-transparent hover:border-slate-800 transition-colors cursor-pointer"
+                      aria-label="Close sidebar"
+                    >
+                      <PanelLeftClose className="w-4 h-4" />
+                    </button>
+                    {/* Floating Tooltip */}
+                    <div className="absolute right-0 top-full mt-2 px-3 py-1 rounded-xl bg-white text-zinc-900 text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 group-hover/close:opacity-100 transition-opacity z-50 shadow-2xl border border-zinc-100">
+                      Close sidebar
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="md:hidden p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 cursor-pointer"
+                  >
+                    {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                  </button>
+                </div>
               </>
             ) : (
-              /* Collapsed Mini Header: Displays the Bridge Logo (Photo 3) */
+              /* Collapsed Mini Header: Displays the Logo with Morph on Hover and "Open sidebar" pill */
               <div className="w-full flex md:flex-col items-center justify-between md:justify-center gap-2">
-                <button
-                  type="button"
-                  id="brand-logo-collapsed-btn"
-                  onClick={handleLogoClick}
-                  title="Bridge Dashboard"
-                  className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 p-1 flex items-center justify-center hover:scale-105 hover:border-cyan-500/40 transition-all shadow-lg shadow-cyan-500/10 cursor-pointer group"
-                >
-                  <BridgeLogo variant="icon" size="sm" />
-                </button>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    id="brand-logo-collapsed-btn"
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="w-10 h-10 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800/80 p-1 flex items-center justify-center transition-all shadow-md cursor-pointer relative group/btn"
+                    aria-label="Open sidebar"
+                  >
+                    {/* Default Logo Icon (visible normally, fades on hover) */}
+                    <div className="group-hover/btn:opacity-0 group-hover/btn:scale-75 transition-all duration-200 flex items-center justify-center">
+                      <BridgeLogo variant="icon" size="sm" />
+                    </div>
+
+                    {/* Morphing PanelLeftOpen Icon (visible on button hover) */}
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/btn:opacity-100 group-hover/btn:scale-100 transition-all duration-200 text-slate-200">
+                      <PanelLeftOpen className="w-5 h-5" />
+                    </div>
+                  </button>
+
+                  {/* Floating Pill Tooltip: "Open sidebar" matching video */}
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-3.5 py-1.5 rounded-2xl bg-white text-zinc-900 text-xs font-semibold whitespace-nowrap pointer-events-none opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 shadow-2xl z-50 flex items-center gap-1.5 border border-zinc-100">
+                    <span>Open sidebar</span>
+                  </div>
+                </div>
 
                 {/* Mobile Menu Toggle when collapsed on mobile */}
                 <button
