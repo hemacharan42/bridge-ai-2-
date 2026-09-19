@@ -703,51 +703,7 @@ export const RecruiterPortalView: React.FC = () => {
         </div>
       )}
 
-      {/* =====================================================================
-       * PERSISTENT FLOATING COMPARISON DOCK
-       * Pops up smoothly when 1 or more candidates are selected for comparison
-       * ===================================================================== */}
-      {comparisonCandidateIds.length > 0 && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-2xl px-4 animate-in slide-in-from-bottom duration-300">
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-900/95 border border-cyan-500/40 shadow-2xl backdrop-blur-xl flex items-center justify-between gap-3 ring-1 ring-cyan-500/20">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 flex items-center justify-center font-bold text-xs shrink-0">
-                {comparisonCandidateIds.length}
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>Candidate Comparison Dock</span>
-                  <span className="text-[10px] font-mono text-cyan-400 font-normal">
-                    ({comparisonCandidateIds.length}/4 Selected)
-                  </span>
-                </div>
-                <div className="text-[11px] text-slate-400 truncate">
-                  {comparisonCandidates.map((c) => c.name).join(", ")}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setComparisonCandidateIds([])}
-                className="px-2.5 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                Clear
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsComparisonModalOpen(true)}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
-              >
-                <Scale className="w-3.5 h-3.5" />
-                <span>Compare Side-by-Side</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* =====================================================================
        * SIDE-BY-SIDE CANDIDATE COMPARISON MATRIX MODAL
